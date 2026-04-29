@@ -13,49 +13,48 @@
 > **Unofficial & Experimental**
 > This is an **unofficial** MCP server created for testing and experimentation purposes. It is **not** affiliated with, endorsed by, or supported by TeamViewer. Use at your own risk. TeamViewer is not responsible for any issues, data loss, or consequences arising from the use of this tool.
 
-Plug it into Claude Code (or any MCP client) and pull live reports from your TeamViewer account in plain English.
+Plug this server into Claude Code (or any MCP-compatible client) to pull live reports, query user directories, and audit device states from your TeamViewer account using plain English.
 
-## What you get
+## Features
 
-Seven tools, all read-only, all just thin wrappers over a single `Authorization: Bearer <script-token>` header:
+This server exposes seven core tools. All tools are strictly **read-only** and act as secure wrappers around your TeamViewer token, guaranteeing that AI agents cannot execute destructive actions (like deleting users or terminating sessions).
 
-| MCP tool | TeamViewer endpoint | Purpose |
+| MCP Tool | TeamViewer Endpoint | Description |
 |---|---|---|
-| `tv_whoami` | `GET /account` | Sanity check — confirms your token works, returns account/email/company/license. |
-| `tv_connection_report` | `GET /reports/connections` | The main reporting endpoint. Optional `from_date`, `to_date`, `username`, `offset_id` (paging). |
-| `tv_list_users` | `GET /users` | Company users. Returned fields depend on licence and token scope. |
-| `tv_list_devices` | `GET /devices` | Managed devices (alias, online state, group, TeamViewer ID). |
-| `tv_list_groups` | `GET /groups` | Groups available to this account. |
-| `tv_list_contacts` | `GET /contacts` | Computers & Contacts entries. |
-| `tv_list_service_cases` | `GET /sessions` | Assist service cases / sessions. |
-
-There are no write/destructive tools. Worst case, the server can read what your token permits. Nothing else.
+| `tv_whoami` | `GET /account` | Sanity check. Confirms your token works and returns your account, email, company, and license level. |
+| `tv_connection_report` | `GET /reports/connections` | The main reporting endpoint. Supports filtering by date (`from_date`, `to_date`), `username`, and handles pagination via `offset_id`. |
+| `tv_list_users` | `GET /users` | Retrieves company users. Returned fields depend on your specific license and token scope. |
+| `tv_list_devices` | `GET /devices` | Lists managed devices, including aliases, online states, groups, and TeamViewer IDs. |
+| `tv_list_groups` | `GET /groups` | Lists all device groups available to the authenticated account. |
+| `tv_list_contacts` | `GET /contacts` | Retrieves entries from your Computers & Contacts list. |
+| `tv_list_service_cases` | `GET /sessions` | Lists active Assist service cases and remote support sessions. |
 
 ## Prerequisites
 
 - macOS or Linux
-- [`uv`](https://docs.astral.sh/uv/) installed (`curl -LsSf https://astral.sh/uv/install.sh | sh`)
-- A TeamViewer **script token** — see below
+- [`uv`](https://docs.astral.sh/uv/) installed on your system (`curl -LsSf https://astral.sh/uv/install.sh | sh`)
+- A TeamViewer **script token** (instructions below)
 
-## Generate a TeamViewer script token
+## Generating a Script Token
 
-1. Sign in at <https://login.teamviewer.com>.
-2. Top-right avatar → **Edit profile** → **Apps & Tokens**.
-3. **Create app or token** → choose **Script** (not OAuth app).
-4. Tick at minimum:
+1. Sign in at the [TeamViewer Management Console](https://login.teamviewer.com).
+2. Click your top-right avatar → **Edit profile** → **Apps & Tokens**.
+3. Click **Create app or token** and select **Script** (do not select OAuth app).
+4. Tick the following minimum read permissions:
    - Account → **Read**
    - User management → **View users**
    - Group management → **View groups**
    - Connection reporting → **View connection report entries**
    - Computer & Contacts → **View entries**
-   - Service cases → **View** (only if your licence exposes Assist sessions)
-5. Save and copy the token. Treat it like a password.
+   - Service cases → **View** *(only if your license exposes Assist sessions)*
+5. Save and copy the token immediately. **Treat this token like a password.**
 
-> If a permission is greyed out, your account is company-managed and a Company Admin needs to grant the matching permission on your user. Connection reporting is the one that's most often locked down.
+> [!NOTE]
+> If a permission is greyed out, your account is company-managed. A Company Admin will need to grant the matching permission to your user profile. Connection reporting is typically the most restricted permission.
 
-## Configure as an MCP server in Claude Code
+## Setup in Claude Code
 
-Add this to `~/.claude.json` under `mcpServers` (create the key if it doesn't exist):
+Add the following configuration to your `~/.claude.json` under the `mcpServers` object (create the object if it doesn't exist):
 
 ```json
 "teamviewer": {
@@ -74,66 +73,56 @@ Add this to `~/.claude.json` under `mcpServers` (create the key if it doesn't ex
 }
 ```
 
-Replace `/absolute/path/to/teamviewer_mcp.py` with wherever you cloned this repo. On Linux/macOS without `uv` on the system PATH, use the full path to `uvx` (`~/.local/bin/uvx`).
+*Note: Replace `/absolute/path/to/teamviewer_mcp.py` with the actual path where you cloned this repository. If `uvx` isn't on your system path, provide the full absolute path to the executable (e.g., `~/.local/bin/uvx`).*
 
-Restart Claude Code (or run `/mcp` to reconnect). The `teamviewer` server should show **connected** with 7 tools listed.
+Restart Claude Code (or run `/mcp` to reconnect). The `teamviewer` server should now show as **connected** with 7 tools available.
 
-## Sanity-check it works
+## Usage Example
 
-In Claude Code, ask:
+Once connected, you can interact naturally with your TeamViewer environment.
 
-> Use tv_whoami.
+**1. Verify your connection:**
+> "Use tv_whoami to verify my connection."
 
-You should see your TeamViewer account email come back. Then:
+**2. Generate a custom report:**
+> "Pull the TeamViewer connection report for the last 30 days and summarize the total session minutes per user in a markdown table."
 
-> Pull the TeamViewer connection report for the last 30 days and summarise total session minutes per user.
+Claude will automatically call `tv_connection_report` with the correct ISO-8601 timestamps, paginate if necessary, and analyze the returned data.
 
-Claude will call `tv_connection_report` with the right date range and analyse the results.
+## Limitations & Best Practices
 
-## Other MCP clients
+- **Pagination:** The `/reports/connections` endpoint is capped at 1,000 records per API call. Older records are reachable via the `offset_id` paging parameter (the LLM handles this by passing the ID of the last record).
+- **Permission Errors (403 Forbidden):** If an endpoint returns a 403, your token lacks the specific permission tick for that endpoint. You will need to recreate the token with the correct scopes.
+- **License Dependencies:** Some TeamViewer accounts expose service cases at `/servicecases` instead of `/sessions`. This server defaults to `/sessions`. If you encounter a 404 error, you may need to swap the endpoint path in `tv_list_service_cases`.
+- **Rate Limiting:** This server acts as a thin, direct wrapper. There are no built-in retries, caching layers, or rate-limit delays. It is highly optimized for human-paced AI workflows, but heavy automation scripts may require explicit backoff logic.
 
-The server speaks plain stdio MCP, so anything that supports MCP works — Claude Desktop, Cursor, Continue, custom Agent SDK clients, etc. Point them at `python teamviewer_mcp.py` with `TEAMVIEWER_TOKEN` set in the environment.
+## Local Development
 
-## Limitations / things to know
-
-- **`/reports/connections` is capped at 1,000 records per call.** Older records are reachable via the `offset_id` paging parameter (use the last record's id from the previous page).
-- **Filters that 403** mean the token is missing that specific permission tick. Re-create the token with the right boxes ticked and replace the env var.
-- **Service cases endpoint differs by licence.** Some accounts expose `/servicecases`, others `/sessions`. This server uses `/sessions`. If you get a 404, swap the path in `tv_list_service_cases` and please open a PR with the variant for your licence.
-- **No retries, no caching, no rate-limit handling.** This is a thin wrapper. TeamViewer's API is generally well-behaved for human-paced reporting use, but heavy automation should add backoff.
-
-## Local development
+To test the server locally or contribute:
 
 ```bash
-# Install deps in a throwaway venv via uv
-uv pip install --system -r requirements.txt   # or use a real venv
+# Install dependencies in a temporary virtual environment using uv
+uv pip install --system -r requirements.txt
 
-# Run directly (talks MCP over stdio — exit with Ctrl+C)
-TEAMVIEWER_TOKEN=… python teamviewer_mcp.py
+# Run directly (the server communicates via stdio — exit with Ctrl+C)
+TEAMVIEWER_TOKEN=your_token_here python teamviewer_mcp.py
 ```
 
-To test calls without an MCP client, the easiest thing is `curl`:
+To verify your token is working independently of the MCP wrapper, test it directly with `curl`:
 
 ```bash
 curl -s -H "Authorization: Bearer $TEAMVIEWER_TOKEN" \
      -H "Accept: application/json" \
-     https://webapi.teamviewer.com/api/v1/account | jq
-```
-
-If that returns your account, the MCP server will too.
-
-## Project structure
-
-```
-teamviewer_mcp.py      # The MCP server — ~240 lines, the entire implementation
-requirements.txt       # mcp[cli], httpx
-README.md
-.gitignore
+     https://webapi.teamviewer.com/api/v1/account
 ```
 
 ## Contributing
 
-PRs welcome — especially for additional read-only endpoints, alternative paths for licence-specific endpoints, or write tools behind an explicit opt-in flag.
+Pull Requests are highly encouraged! We especially welcome:
+- Additional read-only endpoints.
+- Environment variable toggles for alternative license paths (e.g., `/servicecases`).
+- Destructive/write tools placed behind explicit, default-off feature flags.
 
 ## License
 
-MIT — pick a `LICENSE` file when you publish if you want to be explicit.
+This project is licensed under the [MIT License](LICENSE).
