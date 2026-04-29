@@ -9,7 +9,12 @@
 
 ---
 
+> [!WARNING]
+> **Unofficial & Experimental**
+> This is an **unofficial** MCP server created for testing and experimentation purposes. It is **not** affiliated with, endorsed by, or supported by TeamViewer. Use at your own risk. TeamViewer is not responsible for any issues, data loss, or consequences arising from the use of this tool.
+
 Plug it into Claude Code (or any MCP client) and pull live reports from your TeamViewer account in plain English.
+
 ## What you get
 
 Seven tools, all read-only, all just thin wrappers over a single `Authorization: Bearer <script-token>` header:
