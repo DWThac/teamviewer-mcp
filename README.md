@@ -117,7 +117,7 @@ Test it out in Claude Code:
 | `teamviewer_mcp.py` | The MCP server — ~240 lines, the entire implementation |
 | `requirements.txt` | Python dependencies |
 | `.gitignore` | Standard python ignores |
-| `LICENSE` | MIT License |
+
 
 ---
 
