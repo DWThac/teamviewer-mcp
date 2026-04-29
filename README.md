@@ -23,7 +23,7 @@ Seven tools, all read-only, all just thin wrappers over a single `Authorization:
 |---|---|---|
 | `tv_whoami` | `GET /account` | Sanity check — confirms your token works, returns account/email/company/license. |
 | `tv_connection_report` | `GET /reports/connections` | The main reporting endpoint. Optional `from_date`, `to_date`, `username`, `offset_id` (paging). |
-| `tv_list_users` | `GET /users` | Company users (id, email, name). |
+| `tv_list_users` | `GET /users` | Company users. Returned fields depend on licence and token scope. |
 | `tv_list_devices` | `GET /devices` | Managed devices (alias, online state, group, TeamViewer ID). |
 | `tv_list_groups` | `GET /groups` | Groups available to this account. |
 | `tv_list_contacts` | `GET /contacts` | Computers & Contacts entries. |
@@ -124,7 +124,7 @@ If that returns your account, the MCP server will too.
 ## Project structure
 
 ```
-teamviewer_mcp.py      # The MCP server — ~110 lines, the entire implementation
+teamviewer_mcp.py      # The MCP server — ~240 lines, the entire implementation
 requirements.txt       # mcp[cli], httpx
 README.md
 .gitignore
